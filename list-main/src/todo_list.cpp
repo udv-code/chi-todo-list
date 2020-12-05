@@ -4,20 +4,23 @@
 
 #include "udv/todo_list.hpp"
 
-#define GROW(x) x * 2
-
 namespace udv {
+
+	TodoList::~TodoList() {
+		mWorking = false;
+		if (mRunningThread.joinable()) {
+			mRunningThread.join();
+		}
+	}
 
 	TodoList &TodoList::operator=(const TodoList &other) {
 		if (this == &other) {
 			return *this;
 		}
 
-		this->mItems = new item_type[other.mCapacity];
-		this->mCapacity = other.mCapacity;
-
-		std::copy(other.mItems, other.mItems + other.mSize, this->mItems);
-		this->mSize = other.mSize;
+		mItems = other.mItems;
+		mWorking = other.mWorking;
+		mRunningThread = std::thread{routine, std::ref(*this)};
 
 		return *this;
 	}
@@ -27,40 +30,41 @@ namespace udv {
 			return *this;
 		}
 
-		this->mItems = other.mItems;
-		other.mItems = nullptr;
-
-		this->mCapacity = other.mCapacity;
-		other.mCapacity = 0;
-
-		this->mSize = other.mSize;
-		other.mSize = 0;
+		mItems = std::move(other.mItems);
+		mWorking = other.mWorking;
+		mRunningThread = std::move(other.mRunningThread);
 
 		return *this;
 	}
 
-	void TodoList::addItem(TodoItem item) {
-		if (mSize >= mCapacity) {
-			grow();
+	void TodoList::setCallbackNotifier(TodoList::callback_type callback) {
+		std::lock_guard guard{mMutex};
+
+		mCallback = std::move(callback);
+	}
+
+	void TodoList::detachCallback() {
+		std::lock_guard guard{mMutex};
+
+		mCallback = nullptr;
+	}
+
+	void TodoList::tryTrigger() {
+		std::lock_guard guard{mMutex};
+		auto item = mItems.back();
+
+		if (NeedsToBeTriggered(item)) {
+			mCallback(item);
+			mItems.pop_back();
 		}
-
-		*end() = std::move(item);
-		++mSize;
 	}
 
-	template<typename... Args>
-	void TodoList::addItem(Args &&... args) {
-		if (mSize >= mCapacity) {
-			grow();
+	void TodoList::routine(TodoList &list) {
+		while (list.mWorking) {
+			if (!list.empty()) {
+				list.tryTrigger();
+			}
 		}
-
-		*end() = TodoItem{std::forward<Args>(args)...};
-		++mSize;
 	}
 
-	void TodoList::grow() {
-		size_type new_capacity = mCapacity != 0 ? GROW(mCapacity) : 1;
-		mItems = new item_type[new_capacity];
-		mCapacity = new_capacity;
-	}
 }
