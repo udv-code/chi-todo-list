@@ -28,7 +28,7 @@ namespace udv {
 					: list{list_} {
 				list.setCallbackNotifier(callback);
 			}
-			
+
 			~NotifierGuard() {
 				list.detachCallback();
 			}
@@ -67,21 +67,44 @@ namespace udv {
 		inline void addItem(Args &&... args) {
 			std::lock_guard guard{mMutex};
 
-			mItems.emplace_back(std::forward<Args>(args)...);
+			auto *item = new TodoItem{std::forward<Args>(args)...};
+			mItems.push_back(item);
 
-			std::sort(mItems.begin(), mItems.end(), [](const item_type &o1, const item_type &o2) {
-				return o1.triggerTime > o2.triggerTime;
-			});
+			sort();
+		}
+
+		template<typename... Args>
+		inline void addItem(char interval, Args &&... args) {
+			std::lock_guard guard{mMutex};
+
+			auto *item = new TodoPeriodicItem{interval, std::forward<Args>(args)...};
+			mItems.push_back(item);
+
+			sort();
+		}
+
+		inline void addItem(item_type* item) {
+			std::lock_guard guard{mMutex};
+
+			mItems.push_back(item);
+
+			sort();
 		}
 
 		[[nodiscard]] size_type size() const { return mItems.size(); }
 		[[nodiscard]] bool empty() const { return mItems.empty(); }
 
 	private:
-		void setCallbackNotifier(const TodoList::callback_type& callback);
+		void sort() {
+			std::sort(mItems.begin(), mItems.end(), [](item_type *o1, item_type *o2) {
+				return o1->triggerTime > o2->triggerTime;
+			});
+		}
+
+		void setCallbackNotifier(const TodoList::callback_type &callback);
 		void detachCallback();
 	private:
-		std::vector<item_type> mItems;
+		std::vector<item_type *> mItems;
 		bool mExport;
 
 		callback_type mCallback;

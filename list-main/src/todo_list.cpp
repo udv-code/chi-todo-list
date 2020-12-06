@@ -17,6 +17,10 @@ namespace udv {
 		if (mExport) {
 			exportSettings();
 		}
+
+		for (auto &p : mItems) {
+			delete p;
+		}
 	}
 
 	TodoList &TodoList::operator=(const TodoList &other) {
@@ -43,7 +47,7 @@ namespace udv {
 		return *this;
 	}
 
-	void TodoList::setCallbackNotifier(const TodoList::callback_type& callback) {
+	void TodoList::setCallbackNotifier(const TodoList::callback_type &callback) {
 		std::lock_guard guard{mMutex};
 
 		mCallback = callback;
@@ -57,11 +61,16 @@ namespace udv {
 
 	void TodoList::tryTrigger() {
 		std::lock_guard guard{mMutex};
-		auto item = mItems.back();
+		auto* item = mItems.back();
 
-		if (NeedsToBeTriggered(item)) {
-			mCallback(item);
-			mItems.pop_back();
+		if (NeedsToBeTriggered(*item)) {
+			mCallback(*item);
+			if (item->isPeriodic()) {
+				item->triggerTime += item->interval();
+				sort();
+			} else {
+				mItems.pop_back();
+			}
 		}
 	}
 
@@ -83,7 +92,7 @@ namespace udv {
 			}
 
 			for (const auto &item : mItems) {
-				file << item;
+				file << *item;
 			}
 		}
 	}
@@ -102,6 +111,7 @@ namespace udv {
 
 			std::string line;
 			char divider;
+			char periodChar;
 			std::istringstream iss;
 			while (!file.eof()) {
 				line.clear();
@@ -112,11 +122,17 @@ namespace udv {
 					continue;
 				}
 				iss.str(line);
+				iss >> periodChar;
 				iss >> triggerEpochSecs >> divider;
+				iss.get();
 				std::getline(iss, message);
 
 				std::chrono::system_clock::time_point point{std::chrono::seconds{triggerEpochSecs}};
-				addItem(point, message);
+				if (periodChar == NP_CHAR) {
+					addItem(point, message);
+				} else {
+					addItem(periodChar, point, message);
+				}
 			}
 		}
 	}
