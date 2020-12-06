@@ -5,7 +5,10 @@
 
 #include <string>
 #include <codecvt>
+#include <chrono>
 #include <vector>
+#include <ctime>
+#include <iomanip>
 
 #include <SDKDDKVer.h>
 #include <Windows.h>
@@ -90,14 +93,6 @@ namespace udv
 
 	static std::wstring s2lpcw(const std::string& s)
 	{
-		// int len;
-		// int slength = (int)s.length() + 1;
-		// len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
-		// wchar_t* buf = new wchar_t[len];
-		// MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
-		// std::wstring r(buf);
-		// delete[] buf;
-		// return r;
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		std::wstring wide = converter.from_bytes(s);
 		return wide;
@@ -116,7 +111,11 @@ namespace udv
 	void WinApp::handleItemTrigger(TodoItem item)
 	{
 		auto app = WinApp::GetInstance();
-		app->SetStatus("Received Notification");
+
+		std::stringstream status;
+		status << "Received Notification: '" << item.message << "'!";
+
+		app->SetStatus(status.str());
 		app->DisplayToast(item.message);
 	}
 
@@ -132,19 +131,21 @@ namespace udv
 		GetWindowText(app->m_hEditMessage, const_cast<char*>(message.c_str()), len);
 
 		// Reading trigger point
-		std::chrono::time_point<std::chrono::system_clock> triggerTime = std::chrono::system_clock::now() +
-			std::chrono::seconds{2};
-
 		std::string triggerPoint;
 		len = GetWindowTextLength(app->m_hEditTime) + 1;
 		triggerPoint.resize(len - 1);
 		GetWindowText(app->m_hEditTime, const_cast<char*>(triggerPoint.c_str()), len);
+		std::stringstream ss(triggerPoint);
+
+		std::tm tm;
+		ss >> std::get_time(&tm, "%b %d %Y %H:%M:%S");
+		auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
 
 		status << "Scheduled '" << message << "' On " << triggerPoint << "!";
 		app->SetStatus(status.str());
 
 		// Adding item
-		app->mList.addItem(triggerTime, message);
+		app->mList.addItem(tp, message);
 		return S_OK;
 	}
 

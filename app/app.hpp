@@ -29,7 +29,7 @@ namespace udv {
 		void RunMessageLoop();
 
 		HRESULT SetStatus(std::string message);
-		HRESULT ScheduleToast();
+		static HRESULT ScheduleToast();
 
 	private:
 		HRESULT RegisterAppForNotificationSupport();
