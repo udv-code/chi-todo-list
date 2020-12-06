@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <algorithm>
 
 #include "todo_item.hpp"
 
@@ -19,14 +20,15 @@ namespace udv {
 		using size_type = std::size_t;
 		using item_type = TodoItem;
 		using callback_type = std::function<void(item_type)>;
-	private:
+	public:
 		struct NotifierGuard {
 			TodoList &list;
 
 			NotifierGuard(TodoList &list_, callback_type callback)
 					: list{list_} {
-				list.setCallbackNotifier(std::move(callback));
+				list.setCallbackNotifier(callback);
 			}
+			
 			~NotifierGuard() {
 				list.detachCallback();
 			}
@@ -67,8 +69,8 @@ namespace udv {
 
 			mItems.emplace_back(std::forward<Args>(args)...);
 
-			std::sort(mItems.begin(), mItems.end(), [](item_type &o1, item_type &o2) {
-				return o1.triggerTime >= o2.triggerTime;
+			std::sort(mItems.begin(), mItems.end(), [](const item_type &o1, const item_type &o2) {
+				return o1.triggerTime > o2.triggerTime;
 			});
 		}
 
@@ -76,7 +78,7 @@ namespace udv {
 		[[nodiscard]] bool empty() const { return mItems.empty(); }
 
 	private:
-		void setCallbackNotifier(callback_type callback);
+		void setCallbackNotifier(const TodoList::callback_type& callback);
 		void detachCallback();
 	private:
 		std::vector<item_type> mItems;

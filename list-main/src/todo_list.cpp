@@ -43,10 +43,10 @@ namespace udv {
 		return *this;
 	}
 
-	void TodoList::setCallbackNotifier(TodoList::callback_type callback) {
+	void TodoList::setCallbackNotifier(const TodoList::callback_type& callback) {
 		std::lock_guard guard{mMutex};
 
-		mCallback = std::move(callback);
+		mCallback = callback;
 	}
 
 	void TodoList::detachCallback() {
