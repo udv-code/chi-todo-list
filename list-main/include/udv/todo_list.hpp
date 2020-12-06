@@ -11,6 +11,8 @@
 
 #include "todo_item.hpp"
 
+#define DEFAULT_EXPORT_FILENAME "settings.todo"
+
 namespace udv {
 
 	class TodoList {
@@ -31,7 +33,9 @@ namespace udv {
 		};
 
 	public:
-		TodoList() : mItems{}, mWorking{false} {
+		explicit TodoList(const std::string &filename = DEFAULT_EXPORT_FILENAME, bool exportOnDeath = true)
+				: mItems{}, mWorking{false}, mExport{exportOnDeath} {
+			importSettings(filename);
 			initThread();
 		}
 
@@ -53,6 +57,9 @@ namespace udv {
 		}
 		static void routine(TodoList &list);
 		void tryTrigger();
+	private:
+		void exportSettings(const std::string &filename = DEFAULT_EXPORT_FILENAME);
+		void importSettings(const std::string &filename = DEFAULT_EXPORT_FILENAME);
 	public:
 		template<typename... Args>
 		inline void addItem(Args &&... args) {
@@ -73,6 +80,7 @@ namespace udv {
 		void detachCallback();
 	private:
 		std::vector<item_type> mItems;
+		bool mExport;
 
 		callback_type mCallback;
 

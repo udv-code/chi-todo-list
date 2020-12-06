@@ -1,6 +1,8 @@
 // Copyright (c) 2020 udv. All rights reserved.
 
 #include <utility>
+#include <fstream>
+#include <sstream>
 
 #include "udv/todo_list.hpp"
 
@@ -10,6 +12,10 @@ namespace udv {
 		mWorking = false;
 		if (mRunningThread.joinable()) {
 			mRunningThread.join();
+		}
+
+		if (mExport) {
+			exportSettings();
 		}
 	}
 
@@ -63,6 +69,53 @@ namespace udv {
 		while (list.mWorking) {
 			if (!list.empty()) {
 				list.tryTrigger();
+			}
+		}
+	}
+
+	void TodoList::exportSettings(const std::string &filename) {
+		std::ofstream file;
+		file.open(filename, std::ios::trunc);
+
+		if (!file.fail()) {
+			if (file.bad()) {
+				return;
+			}
+
+			for (const auto &item : mItems) {
+				file << item;
+			}
+		}
+	}
+
+	void TodoList::importSettings(const std::string &filename) {
+		std::ifstream file;
+		file.open(filename);
+
+		if (!file.fail()) {
+			if (file.bad()) {
+				return;
+			}
+
+			int64_t triggerEpochSecs;
+			std::string message;
+
+			std::string line;
+			char divider;
+			std::istringstream iss;
+			while (!file.eof()) {
+				line.clear();
+				message.clear();
+				std::getline(file, line);
+
+				if (line.empty()) {
+					continue;
+				}
+				iss.str(line);
+				iss >> triggerEpochSecs >> divider >> message;
+
+				std::chrono::system_clock::time_point point{std::chrono::seconds{triggerEpochSecs}};
+				addItem(point, message);
 			}
 		}
 	}
