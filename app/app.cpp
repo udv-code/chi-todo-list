@@ -6,6 +6,7 @@
 #include <string>
 #include <codecvt>
 #include <chrono>
+#include <optional>
 #include <vector>
 #include <ctime>
 #include <iomanip>
@@ -137,15 +138,20 @@ namespace udv
 		GetWindowText(app->m_hEditTime, const_cast<char*>(triggerPoint.c_str()), len);
 		std::stringstream ss(triggerPoint);
 
+		std::optional<std::chrono::time_point<std::chrono::system_clock>> tpOpt;
 		std::tm tm;
 		ss >> std::get_time(&tm, "%b %d %Y %H:%M:%S");
-		auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+		tpOpt = std::chrono::system_clock::from_time_t(std::mktime(&tm));
 
-		status << "Scheduled '" << message << "' On " << triggerPoint << "!";
-		app->SetStatus(status.str());
+		if (tpOpt) {
+			status << "Scheduled '" << message << "' On " << triggerPoint << "!";
+			app->SetStatus(status.str());
 
-		// Adding item
-		app->mList.addItem(tp, message);
+			// Adding item
+			app->mList.addItem(tpOpt.value(), message);
+		} else {
+			app->SetStatus("Invalid Date Format(Mon D Year HH:mm:ss)");
+		}
 		return S_OK;
 	}
 

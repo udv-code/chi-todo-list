@@ -112,7 +112,8 @@ namespace udv {
 					continue;
 				}
 				iss.str(line);
-				iss >> triggerEpochSecs >> divider >> message;
+				iss >> triggerEpochSecs >> divider;
+				std::getline(iss, message);
 
 				std::chrono::system_clock::time_point point{std::chrono::seconds{triggerEpochSecs}};
 				addItem(point, message);
