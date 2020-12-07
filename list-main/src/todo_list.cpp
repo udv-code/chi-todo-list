@@ -116,22 +116,27 @@ namespace udv {
 			while (!file.eof()) {
 				line.clear();
 				message.clear();
+				triggerEpochSecs = 0;
+				divider = 0;
+				periodChar = 0;
+
 				std::getline(file, line);
 
 				if (line.empty()) {
 					continue;
 				}
 				iss.str(line);
+				iss.clear();
 				iss >> periodChar;
 				iss >> triggerEpochSecs >> divider;
 				iss.get();
 				std::getline(iss, message);
 
 				std::chrono::system_clock::time_point point{std::chrono::seconds{triggerEpochSecs}};
-				if (periodChar == NP_CHAR) {
-					addItem(point, message);
-				} else {
+				if (isPeriodicSymbol(periodChar)) {
 					addItem(periodChar, point, message);
+				} else {
+					addItem(point, message);
 				}
 			}
 		}
