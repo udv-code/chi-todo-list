@@ -372,6 +372,8 @@ namespace udv
 			hr = RegisterActivator();
 		}
 
+		SetStatus("Welcome! Input message and date(in format Mon D Year HH::mm::ss, for example: Dec 6 2020 20:20:20) in fields below and click schedule!");
+
 		return hr;
 	}
 
